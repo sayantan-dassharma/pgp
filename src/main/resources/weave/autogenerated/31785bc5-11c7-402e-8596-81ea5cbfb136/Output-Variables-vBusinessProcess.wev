@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_31785bc5_11c7_402e_8596_81ea5cbfb136_Output_Variables_vBusinessProcess = Any
+

@@ -1,0 +1,34 @@
+commonUtility:
+  retry:
+    queue:
+      name: "demo-events-dlq"
+      url: "https://mq-us-west-2.anypoint.mulesoft.com/api/v1"
+      clientId: "c5731eaff12b4bd7afa541f90231871f"
+      clientSecret: "3b9c35b76E1740A382874E9FF75a0B12"
+      ackTimeOutInSeconds: "180"
+    businessprocessIdentifier:  "vProcess"
+    eventIdentifier: "vEventID"
+    skipRetryIdentifier: "vSkipRetry"
+    excludedErrorTypes: 
+      - "HTTP:NOT_FOUND"
+      - "CUSTOM:MOCK_ERROR"
+demoEvent:
+  inboundQueue:
+    name: "demo-events-queue"
+    url: "https://mq-us-west-2.anypoint.mulesoft.com/api/v1"
+    clientId: "c5731eaff12b4bd7afa541f90231871f"
+    clientSecret: "3b9c35b76E1740A382874E9FF75a0B12"
+    ackTimeOutInSeconds: "180"
+  retry:
+    isEnabled: "false"
+    count: "1"
+    delayInSeconds: "60"
+    excludedErrorTypes: ["HTTP:NOT_FOUND","CUSTOM:MOCK_ERROR"]
+    businessLogicFlow: "demoBusiness_subFlow"
+    failureArchivalFlow: "demoFailureArchival_subFlow"
+    
+    
+    
+   
+  
+  

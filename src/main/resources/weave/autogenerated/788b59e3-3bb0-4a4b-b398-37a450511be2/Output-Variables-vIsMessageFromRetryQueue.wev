@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_788b59e3_3bb0_4a4b_b398_37a450511be2_Output_Variables_vIsMessageFromRetryQueue = Boolean
+

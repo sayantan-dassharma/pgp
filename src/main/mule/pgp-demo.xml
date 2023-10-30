@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:java="http://www.mulesoft.org/schema/mule/java"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="pgp-demoFlow" doc:id="5dd62d36-6f6c-4e31-9951-3434ba224c0f" >
+		<http:listener doc:name="Listener" doc:id="97916224-bb0a-4526-9e73-1a6333bd1b2b" config-ref="HTTP_Listener_config" path="/pgpencrypt"/>
+		<ee:transform doc:name="Transform Message" doc:id="eab4ff49-5f50-473e-a6a2-453583091fa7" >
+			
+			<ee:variables >
+				<ee:set-variable variableName="vInputFileLocation" ><![CDATA[%dw 2.0
+output application/java
+---
+'E:\\Treeyan_Passport.pdf']]></ee:set-variable>
+				<ee:set-variable variableName="vKeyFile" ><![CDATA[%dw 2.0
+output application/java
+---
+'E:\\compositepub.asc']]></ee:set-variable>
+			<ee:set-variable variableName="vOutputFileLocation" ><![CDATA[%dw 2.0
+output application/java
+---
+'E:\\encrypted_jpg1.pgp']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<java:invoke-static doc:id="2d0e9f6b-3ab0-4e12-83f6-ad3833395119" class="trialproject.PGPEncrypt" method="encryptFile1(java.lang.String,java.lang.String,java.lang.String,boolean)">
+			<java:args ><![CDATA[#[{
+	arg0: vars.vInputFileLocation,
+	arg1: vars.vOutputFileLocation,
+	arg2: vars.vKeyFile,
+	arg3: false
+}]]]></java:args>
+		</java:invoke-static>
+		<logger level="INFO" doc:name="Logger" doc:id="184dc804-fef5-4ae8-a8db-38ae903847e0" />
+		<!-- <ee:transform doc:name="Transform Message" doc:id="fbbdf41c-3149-401f-b875-00bdd2c6ea34" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/octet-stream
+-&#45;&#45;
+payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform> -->
+		<logger level="INFO" doc:name="Logger" doc:id="fceed47a-33ad-4e59-bf76-43243cadca92" />
+		<file:write doc:name="Write" doc:id="c57e953f-8d03-47ed-9e04-827aa62282be" path="E:\copyEncrypted_pdf2.pgp">
+			<file:content ><![CDATA[#[output application/octet-stream
+---
+payload as Binary]]]></file:content>
+
+		</file:write>
+		<logger level="INFO" doc:name="Logger" doc:id="cf258e27-3b06-49ca-93d4-9d53771c4b53" />
+		
+		
+	</flow>
+	<flow name="pgp-demoFlow1" doc:id="e1e41425-6556-4bfb-8c49-2186c24a86a8" >
+		<http:listener doc:name="Listener" doc:id="0822e92c-812b-4331-9fa3-5dd5ecce16f4" config-ref="HTTP_Listener_config" path="/placefile"/>
+		<file:read doc:id="958ec8c3-bc72-4a60-96db-93adfb1e3502" path="E:\encrypted.asc"/>
+		<logger level="INFO" doc:name="Logger" doc:id="30c4590f-05af-48f5-9265-cdbdfc7d4e86" />
+		<file:write doc:name="Write" doc:id="092abab8-3181-43a2-8f19-4800c93486d2" path="E:\copyEncrypt_Pdf1.asc"/>
+		<logger level="INFO" doc:name="Logger" doc:id="cfa4e4a1-b691-428b-843d-b6cdd298ec3b" />
+	</flow>
+</mule>

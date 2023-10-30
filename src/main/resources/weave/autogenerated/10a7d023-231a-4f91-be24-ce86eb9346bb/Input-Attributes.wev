@@ -1,0 +1,13 @@
+%dw 2.0
+
+type auto_10a7d023_231a_4f91_be24_ce86eb9346bb_Input_Attributes = {|
+  destination: String, 
+  headers: { _?: String }, 
+  properties: { _?: String }, 
+  messageId: String, 
+  deliveryCount: Number, 
+  contentType?: String, 
+  ackToken?: String
+|} {"typeAlias": "AnypointMQMessageAttributes",
+"typeId": "com.mulesoft.extension.mq.api.attributes.AnypointMQMessageAttributes"}
+

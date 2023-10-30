@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<anypoint-mq:config name="Anypoint_MQ_Retry_Config_1" doc:name="Anypoint MQ Config" doc:id="52dfa65e-6ccd-44bb-b0bf-31cfe7b593aa" >
+		<anypoint-mq:connection clientId="${commonUtility.retry.queue.clientId}" clientSecret="${commonUtility.retry.queue.clientSecret}" url="${commonUtility.retry.queue.url}"/>
+	</anypoint-mq:config>
+	<!-- <sub-flow name="reprocessing_initiation_subFlow_1" doc:id="86cfc5c2-ea98-426a-b1f0-ef12b195ace1" >
+		<choice doc:name="Is Event Not From Retry Queue" doc:id="7876a332-abcc-434b-911f-7c91709f80c0" >
+			<when expression="#[!(vars.vIsMessageFromRetryQueue default false)]">
+				<set-variable value="#[output application/json -&#45;&#45; 0]" doc:name="Set vRetryCount = 0" doc:id="24c87df2-6747-4e1c-a046-16d20c44116f" variableName="vRetryCount" />
+				<ee:dynamic-evaluate doc:name="Dynamic Evaluate - vBusinessProcess" doc:id="c6be4797-3ff5-4a73-843d-1ff9936925e3" expression="#['vars.' ++ p('commonUtility.retry.businessprocessIdentifier')]" target="vBusinessProcess" />
+				<ee:dynamic-evaluate doc:name="Dynamic Evaluate - vEventIdentifier" doc:id="a2db18a7-7747-4a29-afde-64ad0e07a447" expression="#['vars.' ++ p('commonUtility.retry.eventIdentifier')]" target="vEventIdentifier" />
+				<logger level="INFO" doc:name="Log Message Details" doc:id="e0d97122-4319-4762-85f7-a1d8e9d7c64b" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] - Initiate Retry"/>
+				
+				
+			
+</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Log Message Details" doc:id="16a5cdb3-3c1c-4b66-a23a-6e53da5fc99c" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] from Retry Queue with RetryCount: #[vars.vRetryCount] - Initiate Retry"/>
+			</otherwise>
+			
+		</choice>
+		<flow-ref doc:name="Invoke read_retryConfig_subFlow" doc:id="eb185e77-97c7-4bcd-b1ac-a90d19fd62dd" name="read_retryConfig_subFlow"/>
+		<flow-ref doc:name="Invoke check_skipRetryIdentifier_subFlow" doc:id="5d9deb94-e2de-4607-b62f-328d30bcf804" name="check_skipRetryIdentifier_subFlow"/>
+		<choice doc:name="Is Event Eligible for Retry" doc:id="de26c543-64ae-4811-a401-6715e87f4639" >
+			<when expression="#[(vars.vIsRetryEnabled) and !((vars.vSkipRetryFlag as Boolean) default false) and !(vars.arrExcludedErrors contains error.errorType.asString)]">
+				<choice doc:name="Check RetryCount Limit" doc:id="d8e4d7ec-6db9-4a19-b90f-dda5c4272949" >
+					<when expression="#[(vars.vRetryCount &lt; vars.vRetryMaxCount)]">
+						<set-variable value="#[output application/json -&#45;&#45; vars.vRetryCount + 1]" doc:name="Increment vRetryCount" doc:id="99a20494-585b-46fa-8dbe-88daf8dfc645" variableName="vRetryCount"/>
+						<anypoint-mq:publish doc:name="Publish to Retry Queue" doc:id="94dc2cd1-1199-4f06-a5dd-d445ce5d5fa5" config-ref="Anypoint_MQ_Retry_Config" destination="${commonUtility.retry.queue.name}" deliveryDelayUnit="SECONDS" deliveryDelay="#[vars.vRetryDelay]">
+							<anypoint-mq:properties ><![CDATA[#[{
+	"retryCount": vars.vRetryCount,
+	"eventIdentifier": vars.vEventIdentifier,
+	"businessProcess": vars.vBusinessProcess
+}]]]></anypoint-mq:properties>
+						</anypoint-mq:publish>
+						<logger level="INFO" doc:name="Retry Queue Publish Operation Successful" doc:id="b4b8ea73-bbef-45dc-90b4-6dc9fd2d9300" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Retry Queue Publish Operation Successful"/>
+					</when>
+					<otherwise >
+						<logger level="INFO" doc:name="Max Retry Count Exhausted" doc:id="ee252a82-f52d-4cf5-9c4d-8f9011146ad6" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Max Retry Attempts exhausted"/>
+						<flow-ref doc:name="Invoke Failure Archival Flow" doc:id="d4b8aa47-3039-435e-b638-7f4545997902" name="#[p(vars.vBusinessProcess ++ '.retry.failureArchivalFlow')]"/>
+					</otherwise>
+				</choice>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Event Not Eligible for Retry" doc:id="da44e1e3-2cbc-4007-befb-54f58b34bcd4" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Retry Disabled or Encountered Error Not Eligible for Retry"/>
+				<flow-ref doc:name="Invoke Failure Archival Flow" doc:id="ba21016e-b8dc-458b-bdb5-7c04dd620ee7" name="#[p(vars.vBusinessProcess ++ '.retry.failureArchivalFlow')]"/>
+			</otherwise>
+		</choice>
+	</sub-flow> -->
+	<sub-flow name="read_retryConfig_subFlow_1" doc:id="51377a70-3405-4e5e-95ac-b5366af42288" >
+		<set-variable value="#[(p(vars.vBusinessProcess ++ '.retry.isEnabled')) as Boolean]" doc:name="Set Variable - vIsRetryEnabled" doc:id="e8061385-e8d8-463a-946f-5c0fd917d9d6" variableName="vIsRetryEnabled"/>
+		<set-variable value="#[(p(vars.vBusinessProcess ++ '.retry.count')) as Number]" doc:name="Set Variable - vRetryMaxCount" doc:id="15114a4d-0490-40e4-a4c3-e8a385132648" variableName="vRetryMaxCount"/>
+		<set-variable value="#[(p(vars.vBusinessProcess ++ '.retry.delayInSeconds')) as Number]" doc:name="Set Variable - vRetryDelay" doc:id="fec10cce-3289-4280-a457-62b0bacdba58" variableName="vRetryDelay"/>
+		<ee:transform doc:name="Set Variable - arrExcludedErrors" doc:id="4e660d5f-6cc7-4cdb-a7e3-460287ee2b8d" >
+			<ee:variables >
+				<ee:set-variable variableName="arrExcludedErrors" ><![CDATA[%dw 2.0
+output application/json
+---
+(p(vars.vBusinessProcess ++ '.retry.excludedErrorTypes')) splitBy(',')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="check_skipRetryIdentifier_subFlow_1" doc:id="31785bc5-11c7-402e-8596-81ea5cbfb136" >
+		<set-variable value="${commonUtility.retry.skipRetryIdentifier}" doc:name="Read skipRetryIdentifier" doc:id="d555b494-7530-4d26-9110-52a7f9417b8c" variableName="vSkipRetryIdentifier"/>
+		<choice doc:name="Is skipRetryIdentifier configured" doc:id="e0e1aec4-0ca3-47d7-9805-7140faa9d3ed" >
+			<when expression="#[!isEmpty(vars.vSkipRetryIdentifier)]">
+				<ee:dynamic-evaluate doc:name="Dynamic Evaluate - vSkipRetryFlag" doc:id="9485c14b-02e5-405e-b17c-2d1fb3a719e2" expression="#['vars.' ++ vars.vSkipRetryIdentifier]" target="vSkipRetryFlag" />
+				<logger level="INFO" doc:name="Log vSkipRetryFlag " doc:id="fdce8184-b5dd-47e5-ba1d-e80696698cb6" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] - vSkipRetryFlag: #[vars.vSkipRetryFlag]"/>
+				
+			</when>
+			<otherwise >
+				<set-variable value="#[output application/json --- false]" doc:name="vSkipRetryFlag = false" doc:id="8bddf4f6-546f-469c-b77f-3a6ca562995f" variableName="vSkipRetryFlag"/>
+				<logger level="INFO" doc:name="Log vSkipRetryFlag " doc:id="c9a99914-3b6d-4a7f-9d83-af142566b1f5" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] - skipRetryIdentifier not Configured vSkipRetryFlag: #[vars.vSkipRetryFlag]"/>
+				
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<!-- <flow name="reprocessing_execution_flow_1" doc:id="433199b9-0dfe-4de0-8999-54f48ed9f794" >
+[STUDIO:"Subscriber"]		<anypoint-mq:subscriber doc:name="Subscriber" doc:id="bc5122d5-fab4-4865-999b-88044a77a92f" config-ref="Anypoint_MQ_Retry_Config" destination="${commonUtility.retry.queue.name}" acknowledgementMode="MANUAL" acknowledgementTimeoutUnit="SECONDS" acknowledgementTimeout="${commonUtility.retry.queue.ackTimeOutInSeconds}"/> [STUDIO]
+		<set-variable value="#[output application/json -&#45;&#45; true]" doc:name="Set Variable - vIsMessageFromRetryQueue" doc:id="d6a78d39-5129-4734-bb8f-f066f4bee016" variableName="vIsMessageFromRetryQueue"/>
+		<flow-ref doc:name="Invoke read_event_attributes_subFlow" doc:id="2dc8206e-ca93-4f9d-90c5-f5dc936d3401" name="read_event_attributes_subFlow"/>
+		<logger level="INFO" doc:name="Message Received in Retry Queue" doc:id="84c70598-a924-4bf1-8bad-544e2184be8a" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Message Received in Retry Queue Subscriber" />
+		<flow-ref doc:name="Invoke load_business_variables_subFlow" doc:id="aa8de2de-e503-49d9-a15b-ebf9fe12d8be" name="load_business_variables_subFlow"/>
+		<try doc:name="Try" doc:id="cf22fcc3-24fb-48d5-84f8-085c1b8d9e48" >
+			<set-variable value="#[payload]" doc:name="Set Variable - vEventPayload" doc:id="7b2792ef-2f44-438c-b76c-6bc90583f029" variableName="vEventPayload" />
+			<flow-ref doc:name="Invoke Business Logic Flow" doc:id="40a8aba0-d1ac-4ee9-961a-3fbc0d162ebc" name="#[p(vars.vBusinessProcess ++ '.retry.businessLogicFlow')]" />
+			<raise-error doc:name="Raise error" doc:id="d06bbdf6-81f9-4c60-9123-e3bd753ced1c" type="CUSTOM:MOCK_ERROR" description="Mock Error"/>
+			<logger level="INFO" doc:name="Logger Business Process Successful" doc:id="a77477f4-548d-41ef-a627-a28e7d46d8bf" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Business Process Sucessfully Completed"/>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="e5afdb70-5f84-4096-b0be-e217293ad8f1" >
+					<logger level="INFO" doc:name="Logger Business Process Failed" doc:id="e84006ab-3305-40c6-aef3-92bd8020c770" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Business Process Failed"/>
+					<ee:transform doc:name="Load Event Payload" doc:id="656ef54b-d970-4307-a098-6ade426754b4">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+-&#45;&#45;
+vars.vEventPayload]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<try doc:name="Try" doc:id="66970340-d07b-4083-ba82-18b36bbe38b8" >
+						<flow-ref doc:name="Invoke reprocessing_initiation_subFlow" doc:id="1cbc24be-5e84-43e0-a134-0fe19868d2cc" name="reprocessing_initiation_subFlow_1" />
+						<error-handler >
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="138a893e-77b4-482e-b27d-0eba4d90a651" >
+								<logger level="ERROR" doc:name="Retry Initiation Failed" doc:id="d589cbb2-3d97-4287-ad55-5c8b924e9c2f" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] with RetryCount: #[vars.vRetryCount] - Retry Initiation Failed with Error: #[error]"/>
+								<flow-ref doc:name="Invoke Failure Archival Flow" doc:id="122646c8-0eb7-44c3-9f95-bed1ba0a7dd6" name="#[p(vars.vBusinessProcess ++ '.retry.failureArchivalFlow')]"/>
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<anypoint-mq:ack doc:name="Ack" doc:id="6aca510d-fa05-4a3a-af1e-8ee85a9b0a60" config-ref="Anypoint_MQ_Config" ackToken="#[vars.currentAckToken]"/>
+		
+	</flow> -->
+	<sub-flow name="read_event_attributes_subFlow_1" doc:id="788b59e3-3bb0-4a4b-b398-37a450511be2" >
+		<set-variable value="#[attributes.ackToken]" doc:name="Set Variable - currentAckToken" doc:id="266566a7-613d-4984-b112-9e81a1aa2a05" variableName="currentAckToken" />
+		<set-variable value="#[attributes.properties.businessProcess]" doc:name="Set Variable - vBusinessProcess" doc:id="fbc38bdd-8083-42fd-b78a-e669e976153d" variableName="vBusinessProcess" />
+		<set-variable value="#[attributes.properties.eventIdentifier]" doc:name="Set Variable - vEventIdentifier" doc:id="bd0f5b74-87e1-4928-a82f-b393c11a4780" variableName="vEventIdentifier" />
+		<set-variable value="#[attributes.properties.retryCount]" doc:name="Set Variable - vRetryCount" doc:id="2cefbd3a-42f4-4dbd-9b1e-0371ef38b285" variableName="vRetryCount" />
+	</sub-flow>
+	<sub-flow name="load_business_variables_subFlow_1" doc:id="70e51abb-1010-47d7-8e9e-e4a82b20eda0" >
+		<set-variable value="#[vars.vBusinessProcess]" doc:name="Load Variable for BusinessProcess" doc:id="e9c8312a-ccfb-4934-87fa-1483e41fe435" variableName="${commonUtility.retry.businessprocessIdentifier}"/>
+		<set-variable value="#[vars.vEventIdentifier]" doc:name="Load Variable for EventIdentifier" doc:id="529548ec-eeab-4e1a-a047-959a6d834f18" variableName="${commonUtility.retry.eventIdentifier}"/>
+	</sub-flow>
+</mule>

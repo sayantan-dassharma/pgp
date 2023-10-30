@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<anypoint-mq:config name="Anypoint_MQ_Config" doc:name="Anypoint MQ Config" doc:id="04609627-62bf-4d65-a5c5-cb9546b08b8a" >
+		<anypoint-mq:connection url="${demoEvent.inboundQueue.url}" clientId="${demoEvent.inboundQueue.clientId}" clientSecret="${demoEvent.inboundQueue.clientSecret}" />
+	</anypoint-mq:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="b6879a6e-7390-44fb-b7f0-5281f1f7669b" file="base-api-config.yaml" />
+	<import doc:name="Import" doc:id="f22f484b-4b84-46db-a87b-d71d98bf4b7e" file="replay-utility.xml" />
+	<flow name="demoeventFlow1" doc:id="2bb6a1a7-d57b-48de-b1ae-c12d51742e77" >
+		<http:listener doc:name="Listener" doc:id="b4ffd2bf-427c-43d7-8f62-77b5145d9de0" config-ref="HTTP_Listener_config" path="/mqpublish"/>
+		<!-- <set-variable value="#[output application/json -&#45;&#45; payload.flag]" doc:name="Set Variable - vSkipRetry" doc:id="144015c9-b00c-485c-af91-8bc570352904" variableName="vSkipRetry"/>
+		
+		<set-variable value="${commonUtility.retry.skipRetryIdentifier}" doc:name="Read skipRetryIdentifier" doc:id="d58016cf-529e-497d-a6ff-91b9b9220ba7" variableName="vSkipRetryIdentifier"/>
+		<choice doc:name="Is skipRetryIdentifier configured" doc:id="f0f111ab-08ce-4f40-88ad-897bdd9bf804" >
+			<when expression="#[!isEmpty(vars.vSkipRetryIdentifier)]">
+				<ee:dynamic-evaluate doc:name="Dynamic Evaluate - vSkipRetryFlag" doc:id="ea9a62c6-8dfb-4499-85cc-4685d7e93900" expression="#['vars.' ++ vars.vSkipRetryIdentifier]" target="vSkipRetryFlag" />
+				<logger level="INFO" doc:name="Log vSkipRetryFlag " doc:id="93f9138e-8b53-426a-aa4b-207e44c12ce4" message="For Event: #[vars.vEventIdentifier] of Business Process: #[vars.vBusinessProcess] - vSkipRetryFlag: #[vars.vSkipRetryFlag]"/>
+				
+			</when>
+			<otherwise >
+				<set-variable value="#[output application/json -&#45;&#45; false]" doc:name="vSkipRetryFlag = false" doc:id="60e9911e-3fc3-4905-be10-fad39c622620" variableName="vSkipRetryFlag"/>
+			</otherwise>
+		</choice>		
+		<choice doc:name="Choice" doc:id="2496f5a1-dc3f-43ad-8162-d8d068f7047e" >
+			<when expression="!((vars.vSkipRetryFlag  as Boolean) default false)">
+				<logger level="INFO" doc:name="Logger" doc:id="6137b433-4bcc-4bbe-8cee-3ea0a5d85e8d" message="Do Retry"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="8b0ea219-cafa-4bda-ba13-7d218db4a129" message="Skip Retry"/>
+			</otherwise>
+		</choice> -->
+		<set-variable value="${commonUtility.retry.excludedErrorTypes}" doc:name="Set Variable - arrErrors" doc:id="4f45b052-45c9-438a-ac4a-6eefe2fe3980" variableName="arrErrors"/>
+		<logger level="INFO" doc:name="Logger" doc:id="4350166c-e9f0-4aed-b9c7-e29c13e4374e" />
+		<anypoint-mq:publish doc:name="Publish" doc:id="787463db-c7ec-43ab-8a00-5d90750a9ca9" config-ref="Anypoint_MQ_Config" destination="demo-policyevents-inbound-queue"/>
+	</flow>
+	<flow name="demoeventFlow" doc:id="e6b00fa6-8950-42ba-a855-b52f68e6fcad" >
+		<anypoint-mq:subscriber doc:name="Subscriber" doc:id="241b5511-c076-404d-b723-090fa6bea2bf" config-ref="Anypoint_MQ_Config" destination="${demoEvent.inboundQueue.name}" acknowledgementMode="MANUAL" acknowledgementTimeout="30" acknowledgementTimeoutUnit="SECONDS"/>
+		<logger level="INFO" doc:name="Logger" doc:id="c18338f1-c953-4ec3-b825-f38300c90e25" message="Received message: #[payload]"/>
+		<set-variable value="#[attributes.ackToken]" doc:name="Set Variable - currentAckToken" doc:id="4f8bfb73-4f70-4c5a-89e6-38bd24a19fab" variableName="currentAckToken"/>
+		<set-variable value="demoEvent" doc:name="Set Variable - vProcess" doc:id="231934ed-a091-4ff3-9609-b0c279b124b7" variableName="vProcess"/>
+		<json:validate-schema doc:name="Validate schema" doc:id="8aa48ce6-9471-4565-b80e-1af338496dd2" schema="jsonSchema.json"/>
+		<set-variable value="#[output application/java --- payload.eventId]" doc:name="Set Variable - vEventID" doc:id="c0a319bf-79a5-4afd-94c0-bf3f6c6b9693" variableName="vEventID"/>
+		<set-variable value="#[payload]" doc:name="Set Variable - vInputPayload" doc:id="766c7191-6668-4339-8df3-045ca592c714" variableName="vInputPayload"/>
+<!-- [STUDIO:"Invoke demoBusiness_subFlow"]		<flow-ref doc:name="Invoke demoBusiness_subFlow" doc:id="cf15c055-9551-4fea-8485-ad86fc120b85" name="demoBusiness_subFlow"/> [STUDIO] -->
+<!-- [STUDIO:"Set Variable - vSkipRetry"]		<set-variable value="#[output application/json &#45;&#45;- false]" doc:name="Set Variable - vSkipRetry" doc:id="e66342a0-4fd0-4e61-a679-e0bcb9df415e" variableName="vSkipRetry"/> [STUDIO] -->
+		<anypoint-mq:ack doc:name="Ack" doc:id="fe9423fd-3864-4985-8162-47673d55d9b4" config-ref="Anypoint_MQ_Config" ackToken="#[vars.currentAckToken]"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5745142a-8b68-40c9-b796-c206b9a339b1" >
+				
+				<ee:transform doc:name="Load Event Payload" doc:id="406d9c25-58d0-4ac4-b606-a9e3419324b6" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.vInputPayload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+<!-- [STUDIO:"Invoke reprocessing_initiation_subFlow"]				<flow-ref doc:name="Invoke reprocessing_initiation_subFlow" doc:id="f857b904-7a6b-490e-a128-36a27363c0e3" name="reprocessing_initiation_subFlow"/> [STUDIO] -->
+				<anypoint-mq:ack doc:name="Ack" doc:id="f329cc9e-992a-4407-a10c-cac7e21827c9" config-ref="Anypoint_MQ_Config" ackToken="#[vars.currentAckToken]"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<sub-flow name="demoBusiness_subFlow" doc:id="10a7d023-231a-4f91-be24-ce86eb9346bb" >
+		<ee:transform doc:name="Transform Message" doc:id="edebb455-af27-41fd-978a-fed5a2500c14" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "payload changed"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="fbdc3cd1-fc8e-4e06-a7f8-e0e638662d61" message="For Event: #[vars.vEventID] of Business Process: #[vars.vProcess] .. Perform Business Operations"/>
+		<raise-error doc:name="Raise error" doc:id="84dd8c87-eb67-45b5-8480-f49d5ff7fd87" type="CUSTOM:MOCK_ERROR1" />
+	</sub-flow>
+	<sub-flow name="demoFailureArchival_subFlow" doc:id="2255bf2b-254a-4963-bac0-671ad1868d34" >
+		<logger level="INFO" doc:name="Logger" doc:id="ce1a1aa4-157f-4e36-865f-2298849b8865" message="For Event: #[vars.vEventID] of Business Process: #[vars.vProcess] .. Initiate Failure Archival"/>
+	</sub-flow>
+</mule>

@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_51377a70_3405_4e5e_95ac_b5366af42288_Input_Variables_vRetryCount = Number
+

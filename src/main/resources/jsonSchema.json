@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string"
+    },
+    "Event": {
+      "type": "string"
+    },
+    "ParentEvent": {
+      "type": "string"
+    },
+    "SubEventType": {
+      "type": "string"
+    },
+    "PolicyNumber": {
+      "type": "string"
+    },
+    "LOB": {
+      "type": "string"
+    },
+    "CreationTimeStamp": {
+      "type": "string"
+    },
+    "CurrentTimeStamp": {
+      "type": "string"
+    },
+    "RequestedBy": {
+      "type": "string"
+    },
+    "SourceSystem": {
+      "type": "string"
+    },
+    "PayLoad": {
+      "type": "object"      
+    }
+  },
+  "required": [
+    "EventID",
+    "Event",
+    "ParentEvent",
+    "SubEventType",
+    "PolicyNumber",
+    "LOB",
+    "CreationTimeStamp",
+    "CurrentTimeStamp",
+    "RequestedBy",
+    "SourceSystem",
+    "PayLoad"
+  ]
+}

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="eaa541d4-b771-4c08-96cb-f9dde68c7700" >
+		<http:listener-connection host="0.0.0.0" port="8087" />
+	</http:listener-config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="6caba4ce-0118-4965-852b-ca80af217b1a" >
+		<vm:queues >
+			<vm:queue queueName="demoQueue" maxOutstandingMessages="-1" />
+		</vm:queues>
+	</vm:config>
+	<vm:config name="VM_Config1" doc:name="VM Config" doc:id="455ece4a-20e0-447e-96d3-76df2ad16cb2" >
+		<vm:queues >
+			<vm:queue queueName="demoErrorQueue" maxOutstandingMessages="-1" queueType="PERSISTENT"/>
+		</vm:queues>
+	</vm:config>
+	<flow name="trialprojectFlow" doc:id="9dc868f4-4a8c-471b-b822-830dd793e7f9" >
+		<http:listener doc:name="Listener" doc:id="54e320d8-93e4-43a5-adc1-59bacbc0b74f" config-ref="HTTP_Listener_config" path="/publish"/>
+		<ee:transform doc:name="Transform Message" doc:id="8391d955-feb2-4b37-bf71-08af2a8610de" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	time: now()
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<vm:publish queueName="demoQueue" doc:name="Publish" doc:id="858c0bfe-9d90-4c7e-8ee6-39961cb279be" config-ref="VM_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="b325ac02-7559-464f-a15c-ca74e8356e23" message="Message Published"/>
+	</flow>
+	<flow name="trialprojectFlow1" doc:id="f8186b77-3ac4-4ba2-ba9c-9a8b6dea4ac8" maxConcurrency="2">
+		<vm:listener queueName="demoQueue" doc:name="Listener" doc:id="134490bd-02e1-4ec5-967d-33f7e23e4d40" config-ref="VM_Config" numberOfConsumers="2"/>
+		<logger level="INFO" doc:name="Logger" doc:id="997012f4-93ec-46e7-9fed-467096f51027" message="Message Received: #[payload]"/>
+<ee:transform doc:name="Transform Message" doc:id="4cbf532a-7acb-4e63-8952-4c9183a0c8ec" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::Runtime
+output application/json
+---
+payload wait 8000]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="8028df4d-8a81-4077-9e70-07704143e90a" message="message Processed #[payload]"/>
+				<raise-error doc:name="Raise error" doc:id="105e4b40-ef41-4d13-9e16-98a413499490" type="CUSTOM:MOCK_ERROR" description="Mock Error"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7734f394-4728-4763-86ac-7ea326840a28" >
+				<logger level="INFO" doc:name="Logger" doc:id="6fb11d00-632d-43b2-9655-ece693da82ab" message="Error Encountered"/>
+				<vm:publish queueName="demoErrorQueue" doc:name="Publish" doc:id="264b03d0-7b1b-4de5-865a-ca55ba23dc25" config-ref="VM_Config1"/>
+				<logger level="INFO" doc:name="Logger" doc:id="10b95898-2f2a-4d79-ac3d-d7f19900c6b8" message="Failed Message Sent to ErrorQueue"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
